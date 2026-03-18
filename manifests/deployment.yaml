@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sidecar-injector
+  namespace: sidecar-injector
+  labels:
+    app: sidecar-injector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sidecar-injector
+  template:
+    metadata:
+      labels:
+        app: sidecar-injector
+    spec:
+      containers:
+        - name: sidecar-injector
+          image: sidecar-injector:latest # Replace with your actual image
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8443
+          volumeMounts:
+            - name: webhook-certs
+              mountPath: /etc/webhook/certs
+              readOnly: true
+      volumes:
+        - name: webhook-certs
+          secret:
+            secretName: sidecar-injector-certs
