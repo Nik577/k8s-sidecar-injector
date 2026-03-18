@@ -1,53 +1,104 @@
-# Kubernetes Mutating Webhook: Sidecar Injector
+# Kubernetes Mutating Webhook: Sidecar Injector (Enterprise-Ready)
 
-This project implements a Kubernetes Mutating Webhook in Go that automatically injects a security sidecar (Falco) into all new Pods.
+## 🏗 Обзор проекта
+Данный проект представляет собой реализацию **Mutating Admission Webhook** для Kubernetes на языке Go. Вебхук предназначен для автоматической инъекции sidecar-контейнеров (например, агентов безопасности Falco, лог-коллекторов Fluentd или прокси-сервисов) во вновь создаваемые поды в кластере.
 
-## Features
-- **Admission Controller**: Listens for Pod creation requests.
-- **Sidecar Injection**: Automatically adds a `security-agent` container to the Pod's `spec.containers`.
-- **Filtering**: Can be configured to skip injection based on labels (e.g., `sidecar-injection: disabled`).
+В современной Cloud Native инфраструктуре концепция "автоматизации по умолчанию" является критически важной. Данный инструмент позволяет гарантировать, что каждый запущенный сервис будет под защитой или мониторингом без участия разработчика приложения.
 
-## Project Structure
-- `main.go`: The webhook server implementation.
-- `manifests/`: Kubernetes deployment manifests.
-- `scripts/`: TLS certificate generation scripts.
+## 🚀 Зачем это нужно? (Use Cases)
+Как опытный инженер, я выделил основные сценарии, где этот проект незаменим:
+1. **Security Compliance (Falco/Wazuh)**: Автоматическое развертывание агентов обнаружения угроз в каждый под для соблюдения требований безопасности.
+2. **Observability (Prometheus/Fluentd)**: Подключение экспортеров метрик или сборщиков логов, которые должны работать рядом с основным приложением.
+3. **Service Mesh (Custom Linkerd/Istio-like)**: Инъекция сетевых прокси для управления трафиком и шифрования mTLS.
+4. **Secrets Injection**: Подключение агентов (например, HashiCorp Vault Agent) для динамической доставки секретов в контейнеры.
 
-## How to Deploy
+## 🛠 Технический стек
+- **Go 1.21+**: Для обеспечения высокой производительности и минимального потребления ресурсов.
+- **Kubernetes Admission Controller API (v1)**: Стандарт де-факто для расширения возможностей K8s.
+- **JSON Patch (RFC 6902)**: Для точечной модификации манифестов подов без изменения их исходного кода.
 
-### 1. Build the Binary
+---
+
+## 📥 Как подключиться и начать работу
+
+### 1. Клонирование репозитория
 ```bash
-go build -o sidecar-injector main.go
+git clone https://github.com/Nik577/k8s-sidecar-injector.git
+cd k8s-sidecar-injector
 ```
 
-### 2. Generate TLS Certificates
-Kubernetes requires admission webhooks to run over HTTPS. Use the provided script to generate self-signed certificates and create a Kubernetes Secret:
+### 2. Подготовка окружения
+Убедитесь, что у вас установлены:
+- `kubectl` (настроенный на ваш кластер)
+- `openssl` (для генерации сертификатов)
+- `go` (если планируете вносить изменения в код)
+
+---
+
+## ⚙️ Пошаговое развертывание
+
+### Шаг 1: Генерация TLS-сертификатов
+Kubernetes Admission Webhooks **обязаны** работать через HTTPS. Мы используем самоподписанные сертификаты для внутреннего взаимодействия.
+
 ```bash
 chmod +x scripts/gen-certs.sh
 ./scripts/gen-certs.sh
 ```
-*Note: This script will output a `CA_BUNDLE` string. Copy it and replace `${CA_BUNDLE}` in `manifests/webhook-config.yaml`.*
+*Скрипт создаст Kubernetes Secret `sidecar-injector-certs` в пространстве имен `sidecar-injector` и выведет `CA_BUNDLE`. Скопируйте его.*
 
-### 3. Deploy the Service
+### Шаг 2: Настройка конфигурации вебхука
+Откройте `manifests/webhook-config.yaml` и замените `${CA_BUNDLE}` на значение, полученное на предыдущем шаге.
+
+### Шаг 3: Деплой в кластер
 ```bash
-# Create the namespace
+# Создание Namespace
 kubectl create namespace sidecar-injector
 
-# Apply the manifests
+# Применение манифестов
 kubectl apply -f manifests/deployment.yaml
 kubectl apply -f manifests/service.yaml
 kubectl apply -f manifests/webhook-config.yaml
 ```
 
-### 4. Test the Injection
-Create a test Pod and check its containers:
+---
+
+## 🔍 Проверка работы (Validation)
+
+Чтобы убедиться, что инъекция работает, запустите тестовый под:
+
 ```bash
-kubectl run test-pod --image=nginx
-kubectl get pod test-pod -o jsonpath='{.spec.containers[*].name}'
-# Output should include 'security-agent'
+kubectl run test-pod --image=nginx --restart=Never
 ```
 
-## Security Agent
-By default, this injector adds `falcosecurity/falco-no-driver:latest` as a sidecar. You can customize the image and arguments in `main.go`.
+Проверьте наличие контейнеров в поде:
+```bash
+kubectl get pod test-pod -o jsonpath='{.spec.containers[*].name}'
+```
+**Ожидаемый результат:** `nginx security-agent`
 
 ---
-Created for Nik577.
+
+## 🛠 Кастомизация
+
+### Изменение образа sidecar
+В файле `main.go` найдите структуру `sidecar` (строки 95-105). Вы можете изменить образ на любой другой, например:
+```go
+sidecar := corev1.Container{
+    Name:  "log-agent",
+    Image: "fluent/fluent-bit:latest",
+    // ... ваши аргументы
+}
+```
+
+### Управление инъекцией через лейблы
+По умолчанию вебхук настроен так, чтобы **не** внедряться в поды, имеющие лейбл `sidecar-injection: disabled`. Это позволяет гибко управлять исключениями в критически важных системных компонентах.
+
+---
+
+## 🛡 Безопасность и Best Practices
+- **Namespace isolation**: Вебхук работает в выделенном пространстве имен.
+- **Minimal RBAC**: Используются только необходимые права для работы Admission API.
+- **Fail-safe**: В конфигурации `webhook-config.yaml` параметр `failurePolicy` можно настроить как `Ignore` (чтобы не блокировать запуск подов при сбое вебхука) или `Fail` (для жесткого соблюдения политик безопасности).
+
+---
+**Разработано специально для Nik577.** Данный проект является отличным фундаментом для построения безопасной и автоматизированной инфраструктуры.
