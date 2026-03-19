@@ -20,6 +20,9 @@ As a seasoned engineer, I've highlighted key scenarios where this project is ind
 
 ### 🛠 Technical Stack
 - **Go 1.21+**: High performance and minimal resource footprint.
+- **Structured Logging (slog)**: Enterprise-grade JSON logging for observability.
+- **Prometheus Metrics**: Built-in `/metrics` endpoint for real-time monitoring.
+- **Health Checks**: `/healthz` and `/readyz` probes for Kubernetes native lifecycle management.
 - **Kubernetes Admission Controller API (v1)**: The industry standard for extending K8s capabilities.
 - **JSON Patch (RFC 6902)**: Precise modification of pod manifests without altering original source code.
 
@@ -38,6 +41,15 @@ Ensure you have the following installed:
 - `kubectl` (configured for your cluster)
 - `openssl` (for certificate generation)
 - `go` (if you plan to modify the code)
+
+### 1. Build the Binary
+```bash
+# Using Go
+go build -o sidecar-injector ./cmd/webhook/main.go
+
+# Using Docker
+docker build -t sidecar-injector:latest .
+```
 
 ---
 
@@ -61,6 +73,7 @@ Open `manifests/webhook-config.yaml` and replace `${CA_BUNDLE}` with the value o
 kubectl create namespace sidecar-injector
 
 # Apply manifests
+kubectl apply -f manifests/rbac.yaml
 kubectl apply -f manifests/deployment.yaml
 kubectl apply -f manifests/service.yaml
 kubectl apply -f manifests/webhook-config.yaml
@@ -114,6 +127,9 @@ sidecar := corev1.Container{
 
 ### 🛠 Технический стек
 - **Go 1.21+**: Для обеспечения высокой производительности и минимального потребления ресурсов.
+- **Структурированное логирование (slog)**: JSON-логирование для удобной интеграции с ELK/Grafana Loki.
+- **Prometheus Метрики**: Встроенный эндпоинт `/metrics` для мониторинга в реальном времени.
+- **Health Checks**: Проверки `/healthz` и `/readyz` для нативного управления жизненным циклом в K8s.
 - **Kubernetes Admission Controller API (v1)**: Стандарт де-факто для расширения возможностей K8s.
 - **JSON Patch (RFC 6902)**: Для точечной модификации манифестов подов без изменения их исходного кода.
 
@@ -155,6 +171,7 @@ chmod +x scripts/gen-certs.sh
 kubectl create namespace sidecar-injector
 
 # Применение манифестов
+kubectl apply -f manifests/rbac.yaml
 kubectl apply -f manifests/deployment.yaml
 kubectl apply -f manifests/service.yaml
 kubectl apply -f manifests/webhook-config.yaml
