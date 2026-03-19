@@ -6,19 +6,19 @@
 
 ## English Version
 
-### 🏗 Project Overview
+### Project Overview
 This project implements a **Mutating Admission Webhook** for Kubernetes in Go. The webhook is designed to automatically inject sidecar containers (e.g., Falco security agents, Fluentd log collectors, or proxy services) into newly created pods within the cluster.
 
 In modern Cloud Native infrastructure, the concept of "automation by default" is critical. This tool ensures that every launched service is protected or monitored without requiring any changes from the application developer.
 
-### 🚀 Why do you need this? (Use Cases)
+### Why do you need this? (Use Cases)
 As a seasoned engineer, I've highlighted key scenarios where this project is indispensable:
 1. **Security Compliance (Falco/Wazuh)**: Automatically deploy threat detection agents into every pod to meet security requirements.
 2. **Observability (Prometheus/Fluentd)**: Attach metric exporters or log collectors that must run alongside the main application.
 3. **Service Mesh (Custom Linkerd/Istio-like)**: Inject network proxies for traffic management and mTLS encryption.
 4. **Secrets Injection**: Attach agents (e.g., HashiCorp Vault Agent) for dynamic secret delivery into containers.
 
-### 🛠 Technical Stack
+### Technical Stack
 - **Go 1.21+**: High performance and minimal resource footprint.
 - **Structured Logging (slog)**: Enterprise-grade JSON logging for observability.
 - **Prometheus Metrics**: Built-in `/metrics` endpoint for real-time monitoring.
@@ -28,7 +28,7 @@ As a seasoned engineer, I've highlighted key scenarios where this project is ind
 
 ---
 
-### 📥 Getting Started
+### Getting Started
 
 #### 1. Clone the repository
 ```bash
@@ -53,7 +53,7 @@ docker build -t sidecar-injector:latest .
 
 ---
 
-### ⚙️ Step-by-Step Deployment
+### Step-by-Step Deployment
 
 #### Step 1: Generate TLS Certificates
 Kubernetes Admission Webhooks **must** run over HTTPS. We use self-signed certificates for internal communication.
@@ -81,7 +81,7 @@ kubectl apply -f manifests/webhook-config.yaml
 
 ---
 
-### 🔍 Validation
+### Validation
 
 To verify the injection is working, run a test pod:
 
@@ -97,7 +97,7 @@ kubectl get pod test-pod -o jsonpath='{.spec.containers[*].name}'
 
 ---
 
-### 🛠 Customization
+### Customization
 
 #### Changing the sidecar image
 In `main.go`, locate the `sidecar` struct (lines 95-105). You can change the image to any other, for example:
@@ -113,19 +113,19 @@ sidecar := corev1.Container{
 
 ## Russian Версия
 
-### 🏗 Обзор проекта
+### Обзор проекта
 Данный проект представляет собой реализацию **Mutating Admission Webhook** для Kubernetes на языке Go. Вебхук предназначен для автоматической инъекции sidecar-контейнеров (например, агентов безопасности Falco, лог-коллекторов Fluentd или прокси-сервисов) во вновь создаваемые поды в кластере.
 
 В современной Cloud Native инфраструктуре концепция "автоматизации по умолчанию" является критически важной. Данный инструмент позволяет гарантировать, что каждый запущенный сервис будет под защитой или мониторингом без участия разработчика приложения.
 
-### 🚀 Зачем это нужно? (Use Cases)
+### Зачем это нужно? (Use Cases)
 Как опытный инженер, я выделил основные сценарии, где этот проект незаменим:
 1. **Security Compliance (Falco/Wazuh)**: Автоматическое развертывание агентов обнаружения угроз в каждый под для соблюдения требований безопасности.
 2. **Observability (Prometheus/Fluentd)**: Подключение экспортеров метрик или сборщиков логов, которые должны работать рядом с основным приложением.
 3. **Service Mesh (Custom Linkerd/Istio-like)**: Инъекция сетевых прокси для управления трафиком и шифрования mTLS.
 4. **Secrets Injection**: Подключение агентов (например, HashiCorp Vault Agent) для динамической доставки секретов в контейнеры.
 
-### 🛠 Технический стек
+### Технический стек
 - **Go 1.21+**: Для обеспечения высокой производительности и минимального потребления ресурсов.
 - **Структурированное логирование (slog)**: JSON-логирование для удобной интеграции с ELK/Grafana Loki.
 - **Prometheus Метрики**: Встроенный эндпоинт `/metrics` для мониторинга в реальном времени.
@@ -135,7 +135,7 @@ sidecar := corev1.Container{
 
 ---
 
-### 📥 Как подключиться и начать работу
+### Как подключиться и начать работу
 
 #### 1. Клонирование репозитория
 ```bash
@@ -151,7 +151,7 @@ cd k8s-sidecar-injector
 
 ---
 
-### ⚙️ Пошаговое развертывание
+### Пошаговое развертывание
 
 #### Шаг 1: Генерация TLS-сертификатов
 Kubernetes Admission Webhooks **обязаны** работать через HTTPS. Мы используем самоподписанные сертификаты для внутреннего взаимодействия.
@@ -179,7 +179,7 @@ kubectl apply -f manifests/webhook-config.yaml
 
 ---
 
-### 🔍 Проверка работы (Validation)
+### Проверка работы (Validation)
 
 Чтобы убедиться, что инъекция работает, запустите тестовый под:
 
@@ -195,7 +195,7 @@ kubectl get pod test-pod -o jsonpath='{.spec.containers[*].name}'
 
 ---
 
-### 🛠 Кастомизация
+### Кастомизация
 
 #### Изменение образа sidecar
 В файле `main.go` найдите структуру `sidecar` (строки 95-105). Вы можете изменить образ на любой другой, например:
