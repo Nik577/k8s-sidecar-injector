@@ -4,7 +4,7 @@ Built by an engineer who's tired of chasing developers to add logging agents.
 Why I built this?
 In a large-scale cluster, you can't trust every team to remember to include a security agent or a log collector in their Deployment. I wanted a way to enforce Platform Standards without touching a single line of the application's code. This injector acts as a "silent guardian" at the API level.
 
-How it's different from a "Hello World" webhook:
+ How it's different from a "Hello World" webhook:
 No Recompilation: Most tutorials hardcode the sidecar. Here, I’ve implemented a watcher that reads templates from a ConfigMap. Want to swap Fluentd for Vector? Just update the YAML and the webhook picks it up.
 
 Real-world TLS: I didn't stop at gen-certs.sh. The project is pre-configured to work with cert-manager, which is how 99% of Big Tech companies handle webhook certificates.
@@ -40,7 +40,3 @@ Health: /healthz and /readyz endpoints for K8s Probes.
 
 Developed by Nikita Mamonov
 Feel free to open an Issue or a PR if you want to add more injection logic!
-```
-
----
-**Developed by Nikita Mamonov (Nik577)**
