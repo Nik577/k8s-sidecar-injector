@@ -2,6 +2,7 @@ package mutation
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 
 	admissionv1 "k8s.io/api/admission/v1"
@@ -11,10 +12,30 @@ import (
 )
 
 func TestMutatePod(t *testing.T) {
-	config := SidecarConfig{
-		Image: "falcosecurity/falco-no-driver:latest",
-		Name:  "security-agent",
-		Args:  []string{"/usr/bin/falco", "-A"},
+	// Create a temporary sidecar config file
+	tmpfile, err := os.CreateTemp("", "sidecar*.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	content := `
+name: security-agent
+image: falcosecurity/falco-no-driver:latest
+args: ["/usr/bin/falco", "-A"]
+securityContext:
+  privileged: true
+`
+	if _, err := tmpfile.Write([]byte(content)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	mgr, err := NewSidecarConfigManager(tmpfile.Name())
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
 	}
 
 	pod := corev1.Pod{
@@ -47,7 +68,7 @@ func TestMutatePod(t *testing.T) {
 		},
 	}
 
-	response := MutatePod(ar, config)
+	response := MutatePod(ar, mgr)
 
 	if !response.Allowed {
 		t.Errorf("Expected allowed true, got false")
@@ -80,16 +101,17 @@ func TestMutatePod(t *testing.T) {
 		t.Fatalf("Expected value to be a map")
 	}
 
-	if value["name"] != config.Name {
-		t.Errorf("Expected name %s, got %s", config.Name, value["name"])
+	if value["name"] != "security-agent" {
+		t.Errorf("Expected name security-agent, got %v", value["name"])
 	}
 }
 
 func TestMutatePod_SkipIfAlreadyInjected(t *testing.T) {
-	config := SidecarConfig{
-		Image: "falcosecurity/falco-no-driver:latest",
-		Name:  "security-agent",
-	}
+	tmpfile, _ := os.CreateTemp("", "sidecar*.yaml")
+	defer os.Remove(tmpfile.Name())
+	os.WriteFile(tmpfile.Name(), []byte("name: security-agent\nimage: some-image"), 0644)
+
+	mgr, _ := NewSidecarConfigManager(tmpfile.Name())
 
 	pod := corev1.Pod{
 		Spec: corev1.PodSpec{
@@ -113,7 +135,7 @@ func TestMutatePod_SkipIfAlreadyInjected(t *testing.T) {
 		},
 	}
 
-	response := MutatePod(ar, config)
+	response := MutatePod(ar, mgr)
 
 	if !response.Allowed {
 		t.Errorf("Expected allowed true")

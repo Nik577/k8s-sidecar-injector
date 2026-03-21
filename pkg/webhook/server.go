@@ -24,11 +24,12 @@ var (
 
 // Server is the HTTP server for the admission webhook.
 type Server struct {
-	SidecarConfig mutation.SidecarConfig
+	ConfigManager *mutation.SidecarConfigManager
 }
 
 // HandleMutate handles the admission review request for mutation.
 func (s *Server) HandleMutate(w http.ResponseWriter, r *http.Request) {
+	// ... existing body reading logic ...
 	var body []byte
 	if r.Body != nil {
 		if data, err := io.ReadAll(r.Body); err == nil {
@@ -59,7 +60,7 @@ func (s *Server) HandleMutate(w http.ResponseWriter, r *http.Request) {
 			},
 		}
 	} else {
-		admissionResponse = mutation.MutatePod(&ar, s.SidecarConfig)
+		admissionResponse = mutation.MutatePod(&ar, s.ConfigManager)
 	}
 
 	admissionReview := admissionv1.AdmissionReview{
