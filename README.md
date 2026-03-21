@@ -1,102 +1,45 @@
-# Kubernetes Mutating Webhook: Sidecar Injector (Enterprise-Ready)
+K8s Sidecar Injector: Beyond Manual YAML
+Built by an engineer who's tired of chasing developers to add logging agents.
 
-[![CI](https://github.com/Nik577/k8s-sidecar-injector/actions/workflows/ci.yml/badge.svg)](https://github.com/Nik577/k8s-sidecar-injector/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+Why I built this?
+In a large-scale cluster, you can't trust every team to remember to include a security agent or a log collector in their Deployment. I wanted a way to enforce Platform Standards without touching a single line of the application's code. This injector acts as a "silent guardian" at the API level.
 
-[English](#english) | [Русский](README.ru.md)
+How it's different from a "Hello World" webhook:
+No Recompilation: Most tutorials hardcode the sidecar. Here, I’ve implemented a watcher that reads templates from a ConfigMap. Want to swap Fluentd for Vector? Just update the YAML and the webhook picks it up.
 
----
+Real-world TLS: I didn't stop at gen-certs.sh. The project is pre-configured to work with cert-manager, which is how 99% of Big Tech companies handle webhook certificates.
 
-## English
+Production Safety: It won't crash your API server. I’ve included Graceful Shutdown logic and a specialized Reconciler to handle high-concurrency admission requests.
 
-### Project Overview
-This project implements a **Production-Ready Mutating Admission Webhook** for Kubernetes in Go. It enables a **Zero-trust architecture** by automatically injecting security sidecars, log collectors, or proxy services into Pods without requiring developers to modify their Dockerfiles or manifests (**Non-intrusive**).
+ Architecture in a Nutshell
+Intercept: The K8s API Server sends an AdmissionReview to this service.
 
-### Architecture
-```text
-User/CI-CD
-    |
-    v
-+-----------------------+
-|  K8s API Server       |
-+-----------+-----------+
-            |
-            | (1) Admission Review Request
-            v
-+-----------------------+
-| Mutating Webhook      | (2) Read Sidecar Template from ConfigMap
-| (This Go Service)     | (3) Generate JSON Patch
-+-----------+-----------+
-            |
-            | (4) Admission Review Response (Patch)
-            v
-+-----------------------+
-|  K8s API Server       |
-+-----------+-----------+
-            |
-            | (5) Create Pod with Injected Sidecar
-            v
-+-----------+-----------+
-| Pod                  |
-|  +----------------+  |
-|  | Main Container |  |
-|  +----------------+  |
-|  | Sidecar        |  |
-|  +----------------+  |
-+----------------------+
-```
+Match: The service checks if the Pod needs a sidecar (based on namespace or annotations).
 
-### Enterprise Features
-- **Dynamic Configuration**: Sidecar templates are defined in a **ConfigMap**. Update the template and reload the webhook via SIGHUP without recompilation.
-- **Zero-Trust & Security**: Integrated with **cert-manager** for automated TLS certificate management in production.
-- **Production-Ready**: Includes **Graceful Shutdown**, **Prometheus Metrics**, and **Health Probes**.
-- **High Observability**: Structured JSON logging using Go 1.21 `slog`.
-- **CI/CD Integration**: Automated linting and testing (60%+ coverage) via GitHub Actions.
+Patch: It generates a JSON Patch (RFC 6902) to inject the sidecar into the Pod's spec.
 
-### Technical Stack
-- **Go 1.21+**: High performance and efficiency.
-- **Helm**: Standard package manager for K8s deployment.
-- **cert-manager**: Industry standard for X.509 certificate management.
-- **Prometheus**: Real-time monitoring and metrics.
+Deploy: The Pod starts with your main container + the auto-injected agent.
 
----
+ Quick Start (The "I'm in a hurry" way)
+Bash
+# 1. Get the code
+git clone https://github.com/Nik577/k8s-sidecar-injector.git
 
-### Installation & Deployment
+# 2. Deploy via Helm (The Industry Standard)
+# This handles RBAC, Service, and Cert-Manager integration automatically
+helm upgrade --install sidecar-injector ./deploy/helm/k8s-sidecar-injector \
+  --namespace sidecar-injector --create-namespace
+ Monitoring & Ops
+I've baked in observability from day one:
 
-#### 1. Helm Deployment (Recommended for Production)
-The Helm chart supports automated TLS via cert-manager.
+Metrics: Check :8080/metrics for injection success/failure rates.
 
-```bash
-cd deploy/helm/k8s-sidecar-injector
-helm install sidecar-injector . -n sidecar-injector --create-namespace
-```
+Logs: Structured slog (JSON) for easy searching in Grafana Loki or ELK.
 
-#### 2. Local Development (Self-signed)
-```bash
-# Generate certs locally
-chmod +x scripts/gen-certs.sh
-./scripts/gen-certs.sh
+Health: /healthz and /readyz endpoints for K8s Probes.
 
-# Apply manifests
-kubectl apply -f manifests/
-```
-
-### Dynamic Configuration (ConfigMap)
-The sidecar template is stored in a ConfigMap. You can modify it at runtime:
-```yaml
-# Example ConfigMap entry
-sidecar.yaml: |
-  name: "security-agent"
-  image: "falcosecurity/falco-no-driver:latest"
-  args: ["/usr/bin/falco", "-A"]
-```
-After updating the ConfigMap, the webhook will reload the template automatically if the pod is restarted or if you send a SIGHUP signal to the process.
-
-### Validation
-```bash
-kubectl run nginx --image=nginx
-kubectl get pod nginx -o jsonpath='{.spec.containers[*].name}'
-# Output: nginx security-agent
+Developed by Nikita Mamonov
+Feel free to open an Issue or a PR if you want to add more injection logic!
 ```
 
 ---
